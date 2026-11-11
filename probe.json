@@ -1,0 +1,357 @@
+{
+  "menu": {
+    "panel": {
+      "x": 0,
+      "y": 0,
+      "w": 900,
+      "h": 780,
+      "bottom": 780
+    },
+    "levelList": {
+      "x": 170,
+      "y": 301.8,
+      "w": 560,
+      "h": 384,
+      "bottom": 685.8
+    },
+    "h1": {
+      "text": "拼图乐园",
+      "fontSize": "34px",
+      "fontWeight": "900",
+      "color": "rgba(0, 0, 0, 0)",
+      "bg": "rgba(0, 0, 0, 0)",
+      "lineHeight": "normal",
+      "box": {
+        "x": 378,
+        "y": 94.2,
+        "w": 144,
+        "h": 48
+      }
+    },
+    "sub": {
+      "text": "和小动物一起拼图吧！把下面的图片拖到上面的框里，就能拼好啦。",
+      "fontSize": "14px",
+      "fontWeight": "400",
+      "color": "rgb(122, 91, 58)",
+      "bg": "rgba(0, 0, 0, 0)",
+      "lineHeight": "23.8px",
+      "box": {
+        "x": 310,
+        "y": 156.2,
+        "w": 280,
+        "h": 47.6
+      }
+    },
+    "startBtn": {
+      "text": "开始游戏",
+      "fontSize": "22px",
+      "fontWeight": "900",
+      "color": "rgb(255, 255, 255)",
+      "bg": "rgba(0, 0, 0, 0)",
+      "lineHeight": "normal",
+      "box": {
+        "x": 360,
+        "y": 217.8,
+        "w": 180,
+        "h": 64
+      }
+    },
+    "lvName": {
+      "text": "小狗豆豆",
+      "fontSize": "14px",
+      "fontWeight": "800",
+      "color": "rgb(0, 0, 0)",
+      "bg": "rgba(0, 0, 0, 0)",
+      "lineHeight": "normal",
+      "box": {
+        "x": 206.8,
+        "y": 427.8,
+        "w": 56,
+        "h": 20
+      }
+    },
+    "lvStars": {
+      "text": "☆☆☆",
+      "fontSize": "15px",
+      "fontWeight": "400",
+      "color": "rgb(255, 210, 74)",
+      "bg": "rgba(0, 0, 0, 0)",
+      "lineHeight": "normal",
+      "box": {
+        "x": 210.8,
+        "y": 453.8,
+        "w": 48,
+        "h": 21
+      }
+    },
+    "cards": [
+      {
+        "box": {
+          "x": 170,
+          "y": 301.8,
+          "w": 129.5,
+          "h": 185,
+          "bottom": 486.8
+        },
+        "name": "小狗豆豆",
+        "stars": "☆☆☆",
+        "thumbBox": {
+          "x": 179.8,
+          "y": 311.8,
+          "w": 110,
+          "h": 110,
+          "bottom": 421.8
+        }
+      },
+      {
+        "box": {
+          "x": 313.5,
+          "y": 301.8,
+          "w": 129.5,
+          "h": 185,
+          "bottom": 486.8
+        },
+        "name": "小猫团子",
+        "stars": "☆☆☆",
+        "thumbBox": {
+          "x": 323.3,
+          "y": 311.8,
+          "w": 110,
+          "h": 110,
+          "bottom": 421.8
+        }
+      },
+      {
+        "box": {
+          "x": 457,
+          "y": 301.8,
+          "w": 129.5,
+          "h": 185,
+          "bottom": 486.8
+        },
+        "name": "小兔奶糖",
+        "stars": "☆☆☆",
+        "thumbBox": {
+          "x": 466.8,
+          "y": 311.8,
+          "w": 110,
+          "h": 110,
+          "bottom": 421.8
+        }
+      },
+      {
+        "box": {
+          "x": 600.5,
+          "y": 301.8,
+          "w": 129.5,
+          "h": 185,
+          "bottom": 486.8
+        },
+        "name": "企鹅冰冰",
+        "stars": "☆☆☆",
+        "thumbBox": {
+          "x": 610.3,
+          "y": 311.8,
+          "w": 110,
+          "h": 110,
+          "bottom": 421.8
+        }
+      },
+      {
+        "box": {
+          "x": 170,
+          "y": 500.8,
+          "w": 129.5,
+          "h": 185,
+          "bottom": 685.8
+        },
+        "name": "熊猫圆圆",
+        "stars": "☆☆☆",
+        "thumbBox": {
+          "x": 179.8,
+          "y": 510.8,
+          "w": 110,
+          "h": 110,
+          "bottom": 620.8
+        }
+      },
+      {
+        "box": {
+          "x": 313.5,
+          "y": 500.8,
+          "w": 129.5,
+          "h": 185,
+          "bottom": 685.8
+        },
+        "name": "小鸡啾啾",
+        "stars": "☆☆☆",
+        "thumbBox": {
+          "x": 323.3,
+          "y": 510.8,
+          "w": 110,
+          "h": 110,
+          "bottom": 620.8
+        }
+      }
+    ],
+    "docScrollH": 780,
+    "innerH": 780,
+    "hudHidden": true
+  },
+  "play_desktop": {
+    "tag": "desktop",
+    "stage": {
+      "x": 0,
+      "y": 66,
+      "w": 900,
+      "h": 714
+    },
+    "hud": {
+      "x": 0,
+      "y": 0,
+      "w": 900,
+      "h": 66
+    },
+    "canvas": {
+      "x": 0,
+      "y": 66,
+      "w": 900,
+      "h": 780
+    },
+    "dpr": 1,
+    "innerW": 900,
+    "innerH": 780,
+    "scrollH": 780,
+    "hudText": {
+      "levelName": "1. 小狗豆豆",
+      "attempt": "第 1 / 6 关 · 已尝试 0 次",
+      "stars": "☆☆☆"
+    }
+  },
+  "play_mobile": {
+    "tag": "mobile",
+    "stage": {
+      "x": 0,
+      "y": 84,
+      "w": 390,
+      "h": 760
+    },
+    "hud": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 84
+    },
+    "canvas": {
+      "x": 0,
+      "y": 84,
+      "w": 390,
+      "h": 844
+    },
+    "dpr": 2,
+    "innerW": 390,
+    "innerH": 844,
+    "scrollH": 844,
+    "hudText": {
+      "levelName": "1. 小狗豆豆",
+      "attempt": "第 1 / 6 关 · 已尝试 0 次",
+      "stars": "☆☆☆"
+    }
+  },
+  "complete": {
+    "title": {
+      "text": "小狗豆豆 完成！",
+      "fontSize": "26px",
+      "color": "rgb(122, 91, 58)",
+      "opacity": "1",
+      "transform": "none",
+      "box": {
+        "x": 354.7,
+        "y": 332.5,
+        "w": 190.7,
+        "h": 37
+      }
+    },
+    "stars": [
+      {
+        "color": "rgb(255, 210, 74)",
+        "opacity": "1",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "w": 52,
+        "h": 52,
+        "x": 362,
+        "y": 383.5
+      },
+      {
+        "color": "rgb(255, 210, 74)",
+        "opacity": "1",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "w": 52,
+        "h": 52,
+        "x": 424,
+        "y": 383.5
+      },
+      {
+        "color": "rgb(255, 210, 74)",
+        "opacity": "1",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "w": 52,
+        "h": 52,
+        "x": 486,
+        "y": 383.5
+      }
+    ],
+    "btns": [
+      {
+        "text": "下一关",
+        "fontSize": "22px",
+        "x": 190,
+        "y": 449.5,
+        "w": 158,
+        "h": 64
+      },
+      {
+        "text": "再玩一次",
+        "fontSize": "22px",
+        "x": 360,
+        "y": 449.5,
+        "w": 180,
+        "h": 64
+      },
+      {
+        "text": "关卡表",
+        "fontSize": "22px",
+        "x": 552,
+        "y": 449.5,
+        "w": 158,
+        "h": 64
+      }
+    ],
+    "panel": {
+      "text": "小狗豆豆 完成！\n      ★★★\n      \n    ",
+      "fontSize": "16px",
+      "color": "rgb(122, 91, 58)",
+      "opacity": "1",
+      "transform": "none",
+      "box": {
+        "x": 0,
+        "y": 66,
+        "w": 900,
+        "h": 714
+      }
+    },
+    "winStarsBox": {
+      "text": "★★★",
+      "fontSize": "52px",
+      "color": "rgb(122, 91, 58)",
+      "opacity": "1",
+      "transform": "none",
+      "box": {
+        "x": 362,
+        "y": 383.5,
+        "w": 176,
+        "h": 52
+      }
+    }
+  }
+}

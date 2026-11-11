@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#FFF8EC">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>">
+<title>拼图乐园 · 小朋友拼图</title>
+<style>
+  :root{
+    --cream:#FFF8EC;
+    --cream2:#FFEEDC;
+    --brown:#5A4128;      /* 正文色：与奶油底对比度 ≥ 7:1 */
+    --brown2:#8A6B48;
+    --gold:#E8A317;       /* 星星色：加深以保证在浅底上可读 */
+    --green:#2F9E73;
+    --pink:#E8609C;
+    --shadow:rgba(120,90,60,.22);
+    --r:18px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0;height:100%;overflow:hidden;background:var(--cream);
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    color:var(--brown);
+    touch-action:none;user-select:none;-webkit-user-select:none;
+    overscroll-behavior:none;
+  }
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;}
+
+  /* ---------- 顶部 HUD ---------- */
+  #hud{
+    flex:0 0 auto;display:flex;align-items:center;gap:10px;
+    padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top));
+    background:linear-gradient(180deg,#FFFDF7,#FFF3E2);
+    border-bottom:2px solid rgba(200,170,140,.28);
+    box-shadow:0 2px 10px var(--shadow);z-index:20;
+  }
+  #hud.hidden{display:none;}
+  .hudBtn{
+    border:none;background:#fff;color:var(--brown);font-size:16px;font-weight:800;
+    padding:9px 13px;border-radius:14px;cursor:pointer;
+    box-shadow:0 3px 0 rgba(190,155,120,.5);
+    transition:transform .12s, box-shadow .12s;
+    min-height:42px;
+  }
+  .hudBtn:active{transform:translateY(3px);box-shadow:0 0 0 rgba(190,155,120,.5);}
+  #levelName{flex:1;font-size:18px;font-weight:800;text-align:center;letter-spacing:.5px;}
+  #starCount{color:var(--gold);font-size:19px;letter-spacing:1px;text-shadow:0 1px 0 rgba(0,0,0,.25);}
+  #attemptCount{font-size:13px;color:var(--brown2);text-align:center;width:100%;}
+
+  /* ---------- 画布 ---------- */
+  #stage{position:relative;flex:1 1 auto;min-height:0;}
+  #game{display:block;touch-action:none;}
+
+  /* ---------- 遮罩面板 ---------- */
+  .panel{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;padding:20px;
+    background:rgba(255,248,236,.94);backdrop-filter:blur(6px);
+    z-index:30;overflow-y:auto;
+  }
+  .panel.hidden{display:none;}
+  .panel h1{
+    margin:0;font-size:34px;font-weight:900;letter-spacing:2px;
+    background:linear-gradient(180deg,#FFB347,#FF8C42);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 3px 0 rgba(255,255,255,.6);
+  }
+  .panel h2{margin:0;font-size:26px;font-weight:900;}
+  .sub{font-size:16px;color:var(--brown);opacity:.85;margin:0;text-align:center;line-height:1.8;}
+
+  .bigBtn{
+    border:none;font-size:22px;font-weight:900;color:#fff;cursor:pointer;
+    padding:16px 46px;border-radius:24px;
+    background:linear-gradient(180deg,#43B98A,#2E8C63);
+    box-shadow:0 6px 0 #22694A, 0 10px 22px var(--shadow);
+    transition:transform .12s, box-shadow .12s;min-height:64px;
+  }
+  .bigBtn:active{transform:translateY(5px);box-shadow:0 1px 0 #22694A;}
+  .bigBtn.alt{background:linear-gradient(180deg,#F09B3E,#D9701F);box-shadow:0 6px 0 #A85413, 0 10px 22px var(--shadow);}
+  .bigBtn.alt:active{box-shadow:0 1px 0 #A85413;}
+
+  /* ---------- 关卡表 ---------- */
+  #levelList{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(124px,1fr));
+    gap:14px;width:100%;max-width:560px;margin-top:6px;
+  }
+  .levelCard{
+    background:#fff;border:none;border-radius:var(--r);padding:10px 8px 12px;
+    cursor:pointer;box-shadow:0 4px 0 rgba(200,170,140,.45), 0 8px 18px var(--shadow);
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    transition:transform .12s, box-shadow .12s;
+  }
+  .levelCard:active{transform:translateY(4px);box-shadow:0 0 0 rgba(200,170,140,.45);}
+  .levelCard .thumb{width:100%;max-width:110px;aspect-ratio:1;border-radius:14px;display:block;}
+  .lvName{font-size:16px;font-weight:800;}
+  .lvStars{font-size:15px;color:var(--gold);letter-spacing:1px;text-shadow:0 1px 0 rgba(0,0,0,.18);}
+
+  /* ---------- 通关面板 ---------- */
+  #complete{z-index:40;}
+  #winStars{display:flex;gap:10px;font-size:52px;line-height:1;}
+  .wstar{color:#C9BCA6;transform:scale(.6);opacity:.4;transition:all .35s cubic-bezier(.34,1.56,.64,1);}
+  .wstar.on{color:var(--gold);transform:scale(1);opacity:1;text-shadow:0 3px 0 rgba(0,0,0,.22);}
+  .winRow{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+
+  /* ---------- 参考图弹窗 ---------- */
+  #refModal{z-index:50;background:rgba(60,40,25,.72);backdrop-filter:blur(8px);}
+  #refCanvas{
+    max-width:min(88vw,520px);border-radius:var(--r);display:block;
+    box-shadow:0 14px 40px rgba(0,0,0,.4);border:5px solid #fff;
+  }
+  .closeBtn{
+    border:none;background:#fff;color:var(--brown);font-size:17px;font-weight:800;
+    padding:12px 30px;border-radius:20px;cursor:pointer;box-shadow:0 4px 0 rgba(190,155,120,.5);
+  }
+  .closeBtn:active{transform:translateY(3px);box-shadow:none;}
+
+  /* ---------- 小屏适配 ---------- */
+  @media (max-height:560px){
+    .panel h1{font-size:26px;}
+    #levelList{gap:10px;}
+    .levelCard .thumb{max-width:82px;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="hud" class="hidden">
+    <button class="hudBtn" id="menuBtn">关卡</button>
+    <div>
+      <div id="levelName">拼图乐园</div>
+      <div id="attemptCount"></div>
+    </div>
+    <button class="hudBtn" id="refBtn">参考图</button>
+    <button class="hudBtn" id="soundBtn">🔊</button>
+    <span id="starCount">☆☆☆</span>
+  </header>
+
+  <div id="stage">
+    <canvas id="game"></canvas>
+
+    <!-- 开始菜单 -->
+    <div class="panel" id="menu">
+      <h1>拼图乐园</h1>
+      <p class="sub">和小动物一起拼图吧！<br>把下面的图片拖到上面的框里，就能拼好啦。</p>
+      <button class="bigBtn" id="startBtn">开始游戏</button>
+      <div id="levelList"></div>
+    </div>
+
+    <!-- 通关结算 -->
+    <div class="panel hidden" id="complete">
+      <h2 id="winTitle">完成！</h2>
+      <div id="winStars"></div>
+      <div class="winRow">
+        <button class="bigBtn" id="nextBtn">下一关</button>
+        <button class="bigBtn alt" id="retryBtn">再玩一次</button>
+        <button class="bigBtn alt" id="menuBtn2">关卡表</button>
+      </div>
+    </div>
+
+    <!-- 参考图 -->
+    <div class="panel hidden" id="refModal">
+      <canvas id="refCanvas"></canvas>
+      <button class="closeBtn" id="closeRef">看好了</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./puzzle-game.js"></script>
+</body>
+</html>

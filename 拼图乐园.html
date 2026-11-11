@@ -1,0 +1,2171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#FFF8EC">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>">
+<title>拼图乐园 · 小朋友拼图</title>
+<style>
+  :root{
+    --cream:#FFF8EC;
+    --cream2:#FFEEDC;
+    --brown:#5A4128;      /* 正文色：与奶油底对比度 ≥ 7:1 */
+    --brown2:#8A6B48;
+    --gold:#E8A317;       /* 星星色：加深以保证在浅底上可读 */
+    --green:#2F9E73;
+    --pink:#E8609C;
+    --shadow:rgba(120,90,60,.22);
+    --r:18px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0;height:100%;overflow:hidden;background:var(--cream);
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,-apple-system,sans-serif;
+    color:var(--brown);
+    touch-action:none;user-select:none;-webkit-user-select:none;
+    overscroll-behavior:none;
+  }
+  #app{position:fixed;inset:0;display:flex;flex-direction:column;}
+
+  /* ---------- 顶部 HUD ---------- */
+  #hud{
+    flex:0 0 auto;display:flex;align-items:center;gap:10px;
+    padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top));
+    background:linear-gradient(180deg,#FFFDF7,#FFF3E2);
+    border-bottom:2px solid rgba(200,170,140,.28);
+    box-shadow:0 2px 10px var(--shadow);z-index:20;
+  }
+  #hud.hidden{display:none;}
+  .hudBtn{
+    border:none;background:#fff;color:var(--brown);font-size:16px;font-weight:800;
+    padding:9px 13px;border-radius:14px;cursor:pointer;
+    box-shadow:0 3px 0 rgba(190,155,120,.5);
+    transition:transform .12s, box-shadow .12s;
+    min-height:42px;
+  }
+  .hudBtn:active{transform:translateY(3px);box-shadow:0 0 0 rgba(190,155,120,.5);}
+  #levelName{flex:1;font-size:18px;font-weight:800;text-align:center;letter-spacing:.5px;}
+  #starCount{color:var(--gold);font-size:19px;letter-spacing:1px;text-shadow:0 1px 0 rgba(0,0,0,.25);}
+  #attemptCount{font-size:13px;color:var(--brown2);text-align:center;width:100%;}
+
+  /* ---------- 画布 ---------- */
+  #stage{position:relative;flex:1 1 auto;min-height:0;}
+  #game{display:block;touch-action:none;}
+
+  /* ---------- 遮罩面板 ---------- */
+  .panel{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;padding:20px;
+    background:rgba(255,248,236,.94);backdrop-filter:blur(6px);
+    z-index:30;overflow-y:auto;
+  }
+  .panel.hidden{display:none;}
+  .panel h1{
+    margin:0;font-size:34px;font-weight:900;letter-spacing:2px;
+    background:linear-gradient(180deg,#FFB347,#FF8C42);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 3px 0 rgba(255,255,255,.6);
+  }
+  .panel h2{margin:0;font-size:26px;font-weight:900;}
+  .sub{font-size:16px;color:var(--brown);opacity:.85;margin:0;text-align:center;line-height:1.8;}
+
+  .bigBtn{
+    border:none;font-size:22px;font-weight:900;color:#fff;cursor:pointer;
+    padding:16px 46px;border-radius:24px;
+    background:linear-gradient(180deg,#43B98A,#2E8C63);
+    box-shadow:0 6px 0 #22694A, 0 10px 22px var(--shadow);
+    transition:transform .12s, box-shadow .12s;min-height:64px;
+  }
+  .bigBtn:active{transform:translateY(5px);box-shadow:0 1px 0 #22694A;}
+  .bigBtn.alt{background:linear-gradient(180deg,#F09B3E,#D9701F);box-shadow:0 6px 0 #A85413, 0 10px 22px var(--shadow);}
+  .bigBtn.alt:active{box-shadow:0 1px 0 #A85413;}
+
+  /* ---------- 关卡表 ---------- */
+  #levelList{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(124px,1fr));
+    gap:14px;width:100%;max-width:560px;margin-top:6px;
+  }
+  .levelCard{
+    background:#fff;border:none;border-radius:var(--r);padding:10px 8px 12px;
+    cursor:pointer;box-shadow:0 4px 0 rgba(200,170,140,.45), 0 8px 18px var(--shadow);
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    transition:transform .12s, box-shadow .12s;
+  }
+  .levelCard:active{transform:translateY(4px);box-shadow:0 0 0 rgba(200,170,140,.45);}
+  .levelCard .thumb{width:100%;max-width:110px;aspect-ratio:1;border-radius:14px;display:block;}
+  .lvName{font-size:16px;font-weight:800;}
+  .lvStars{font-size:15px;color:var(--gold);letter-spacing:1px;text-shadow:0 1px 0 rgba(0,0,0,.18);}
+
+  /* ---------- 通关面板 ---------- */
+  #complete{z-index:40;}
+  #winStars{display:flex;gap:10px;font-size:52px;line-height:1;}
+  .wstar{color:#C9BCA6;transform:scale(.6);opacity:.4;transition:all .35s cubic-bezier(.34,1.56,.64,1);}
+  .wstar.on{color:var(--gold);transform:scale(1);opacity:1;text-shadow:0 3px 0 rgba(0,0,0,.22);}
+  .winRow{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+
+  /* ---------- 参考图弹窗 ---------- */
+  #refModal{z-index:50;background:rgba(60,40,25,.72);backdrop-filter:blur(8px);}
+  #refCanvas{
+    max-width:min(88vw,520px);border-radius:var(--r);display:block;
+    box-shadow:0 14px 40px rgba(0,0,0,.4);border:5px solid #fff;
+  }
+  .closeBtn{
+    border:none;background:#fff;color:var(--brown);font-size:17px;font-weight:800;
+    padding:12px 30px;border-radius:20px;cursor:pointer;box-shadow:0 4px 0 rgba(190,155,120,.5);
+  }
+  .closeBtn:active{transform:translateY(3px);box-shadow:none;}
+
+  /* ---------- 小屏适配 ---------- */
+  @media (max-height:560px){
+    .panel h1{font-size:26px;}
+    #levelList{gap:10px;}
+    .levelCard .thumb{max-width:82px;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="hud" class="hidden">
+    <button class="hudBtn" id="menuBtn">关卡</button>
+    <div>
+      <div id="levelName">拼图乐园</div>
+      <div id="attemptCount"></div>
+    </div>
+    <button class="hudBtn" id="refBtn">参考图</button>
+    <button class="hudBtn" id="soundBtn">🔊</button>
+    <span id="starCount">☆☆☆</span>
+  </header>
+
+  <div id="stage">
+    <canvas id="game"></canvas>
+
+    <!-- 开始菜单 -->
+    <div class="panel" id="menu">
+      <h1>拼图乐园</h1>
+      <p class="sub">和小动物一起拼图吧！<br>把下面的图片拖到上面的框里，就能拼好啦。</p>
+      <button class="bigBtn" id="startBtn">开始游戏</button>
+      <div id="levelList"></div>
+    </div>
+
+    <!-- 通关结算 -->
+    <div class="panel hidden" id="complete">
+      <h2 id="winTitle">完成！</h2>
+      <div id="winStars"></div>
+      <div class="winRow">
+        <button class="bigBtn" id="nextBtn">下一关</button>
+        <button class="bigBtn alt" id="retryBtn">再玩一次</button>
+        <button class="bigBtn alt" id="menuBtn2">关卡表</button>
+      </div>
+    </div>
+
+    <!-- 参考图 -->
+    <div class="panel hidden" id="refModal">
+      <canvas id="refCanvas"></canvas>
+      <button class="closeBtn" id="closeRef">看好了</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+/* ============================================================
+ * 拼图乐园 · 单文件版
+ * 四个模块合并为一个 IIFE，作用域隔离，无需构建、无外部依赖
+ * ============================================================ */
+(function () {
+'use strict';
+
+/**
+ * 拼图几何核心（纯逻辑，无 DOM 依赖）
+ *
+ * 坐标系：单位 = 1 个格子。板面 cols×rows，格子为正方形。
+ * cells[row][col] = 拼块编号；同一编号的格子合并为一块（可组成 L 形）。
+ * 相邻拼块的公共边上生成「颈部圆弧 + 圆头」的真榫卯。
+ */
+const LEVELS = [
+  { id: 1, kind: 'dog',     name: '小狗豆豆', cols: 2, rows: 1, cells: [[0, 1]],                          pal: 'meadow'  },
+  { id: 2, kind: 'cat',     name: '小猫团子', cols: 1, rows: 2, cells: [[0], [1]],                          pal: 'sunny'   },
+  { id: 3, kind: 'rabbit',  name: '小兔奶糖', cols: 2, rows: 2, cells: [[0, 1], [2, 2]],                    pal: 'lilac' },
+  { id: 4, kind: 'penguin', name: '企鹅冰冰', cols: 2, rows: 2, cells: [[0, 1], [0, 2]],                    pal: 'polar'   },
+  { id: 5, kind: 'panda',   name: '熊猫圆圆', cols: 2, rows: 2, cells: [[0, 1], [2, 3]],                    pal: 'bamboo'  },
+  { id: 6, kind: 'chick',   name: '小鸡啾啾', cols: 3, rows: 2, cells: [[0, 0, 1], [2, 3, 3]],              pal: 'aqua'    },
+];
+
+/* ---------------- 工具 ---------------- */
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+
+/* ---------------- 榫卯轮廓 ---------------- */
+/**
+ * 生成一条带榫卯的边的采样点。返回点列从 a 指向 b。
+ *
+ * 形状：直线段 → 颈部切线 → 圆头圆弧 → 颈部切线 → 直线段
+ * 几何推导：圆头圆心落在边的中点（与基线共线），半径 r；
+ *   颈部基点距圆心 w = 1.4r，由切线条件 sin α = r/w 得出切点。
+ * bulge 为绝对凸起方向（单位向量），保证相邻两块得到同一条曲线。
+ */
+function edgeProfile(a, b, bulge, steps = 16) {
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const L = Math.hypot(dx, dy);
+  if (L < 1e-6) return [[a[0], a[1]], [b[0], b[1]]];
+
+  const d = [dx / L, dy / L];
+  const perp = [-d[1], d[0]];
+  const s = Math.sign(bulge[0] * perp[0] + bulge[1] * perp[1]) || 1;
+
+  const r = 0.20 * L;        // 圆头半径
+  const w = 1.40 * r;        // 颈部基点偏移
+  const alpha = Math.asin(r / w);
+  const ca = Math.cos(alpha), sa = Math.sin(alpha);
+
+  const M = [a[0] + dx * 0.5, a[1] + dy * 0.5];
+  const N1 = [M[0] - d[0] * w, M[1] - d[1] * w];
+  const T1 = [M[0] - d[0] * r * sa + perp[0] * r * ca, M[1] - d[1] * r * sa + perp[1] * r * ca];
+  const T2 = [M[0] + d[0] * r * sa + perp[0] * r * ca, M[1] + d[1] * r * sa + perp[1] * r * ca];
+  const N2 = [M[0] + d[0] * w, M[1] + d[1] * w];
+
+  const pts = [[a[0], a[1]], [N1[0], N1[1]], [T1[0], T1[1]]];
+  const th1 = Math.atan2(ca, -sa);   // 切点 T1 的极角（基底 d / perp）
+  const th2 = Math.atan2(ca, sa);    // 切点 T2 的极角
+  for (let i = 1; i < steps; i++) {
+    const th = th1 + (th2 - th1) * (i / steps);
+    const ux = Math.cos(th) * r, uy = Math.sin(th) * r;
+    pts.push([M[0] + d[0] * ux + perp[0] * uy, M[1] + d[1] * ux + perp[1] * uy]);
+  }
+  pts.push([T2[0], T2[1]], [N2[0], N2[1]], [b[0], b[1]]);
+
+  // 凸起方向与 perp 反向时，沿边线镜像整个轮廓
+  if (s < 0) {
+    for (const p of pts) {
+      const vx = p[0] - M[0], vy = p[1] - M[1];
+      const along = vx * d[0] + vy * d[1];
+      const pc = -(vx * perp[0] + vy * perp[1]);
+      p[0] = M[0] + d[0] * along + perp[0] * pc;
+      p[1] = M[1] + d[1] * along + perp[1] * pc;
+    }
+  }
+  return pts;
+}
+
+/* ---------------- 关卡 → 拼块 ---------------- */
+
+/**
+ * @param {object} level
+ * @param {number} seed 随机种子，决定榫卯朝向
+ */
+function buildLevel(level, seed = 1) {
+  const { cols, rows, cells } = level;
+  const rnd = mulberry32(seed * 7919 + 13);
+
+  // 1. 收集全部内部边（相邻且属于不同拼块）
+  const edges = new Map();   // key -> {axis, line, seg, bulge}
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const id = cells[r][c];
+      if (c + 1 < cols && cells[r][c + 1] !== id) {
+        edges.set(`V_${c + 1}_${r}`, { axis: 'V', line: c + 1, seg: r, bulge: [rnd() < 0.5 ? 1 : -1, 0] });
+      }
+      if (r + 1 < rows && cells[r + 1][c] !== id) {
+        edges.set(`H_${r + 1}_${c}`, { axis: 'H', line: r + 1, seg: c, bulge: [0, rnd() < 0.5 ? 1 : -1] });
+      }
+    }
+  }
+  // 避免所有榫卯朝同一侧，改为左右交替
+  const vKeys = [...edges.keys()].filter((k) => k.startsWith('V_'));
+  const hKeys = [...edges.keys()].filter((k) => k.startsWith('H_'));
+  vKeys.forEach((k, i) => { edges.get(k).bulge = [i % 2 === 0 ? 1 : -1, 0]; });
+  hKeys.forEach((k, i) => { edges.get(k).bulge = [0, i % 2 === 0 ? 1 : -1]; });
+
+  // 2. 按拼块分组
+  const groups = new Map();
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const id = cells[r][c];
+      if (!groups.has(id)) groups.set(id, []);
+      groups.get(id).push([r, c]);
+    }
+  }
+
+  const pieces = [];
+  for (const [id, list] of [...groups.entries()].sort((a, b) => a[0] - b[0])) {
+    const minCol = Math.min(...list.map((p) => p[1]));
+    const maxCol = Math.max(...list.map((p) => p[1]));
+    const minRow = Math.min(...list.map((p) => p[0]));
+    const maxRow = Math.max(...list.map((p) => p[0]));
+
+    // 拼块自身的重心（相对 minCol/minRow，单位：格）
+    const cx = list.reduce((s, p) => s + p[1] + 0.5, 0) / list.length - minCol;
+    const cy = list.reduce((s, p) => s + p[0] + 0.5, 0) / list.length - minRow;
+
+    // 收集有向边界线段（顺时针，单位坐标）
+    const segs = [];
+    const push = (key, a, b, axis) => {
+      const e = edges.get(key);
+      segs.push({ a, b, internal: !!e, bulge: e ? e.bulge : null, axis });
+    };
+    for (const [r, c] of list) {
+      const up = r - 1 >= 0 ? cells[r - 1][c] : -1;
+      const dn = r + 1 < rows ? cells[r + 1][c] : -1;
+      const lf = c - 1 >= 0 ? cells[r][c - 1] : -1;
+      const rt = c + 1 < cols ? cells[r][c + 1] : -1;
+      if (up !== id) push(`H_${r}_${c}`, [c, r], [c + 1, r], 'H');
+      if (rt !== id) push(`V_${c + 1}_${r}`, [c + 1, r], [c + 1, r + 1], 'V');
+      if (dn !== id) push(`H_${r + 1}_${c}`, [c + 1, r + 1], [c, r + 1], 'H');
+      if (lf !== id) push(`V_${c}_${r}`, [c, r + 1], [c, r], 'V');
+    }
+
+    // 串成闭环：每个顶点恰好一条出边
+    const key = (p) => `${p[0].toFixed(4)}|${p[1].toFixed(4)}`;
+    const startMap = new Map();
+    segs.forEach((s, i) => startMap.set(key(s.a), i));
+    const order = [];
+    let cur = 0;
+    for (let guard = 0; guard <= segs.length; guard++) {
+      order.push(cur);
+      const nxt = startMap.get(key(segs[cur].b));
+      if (nxt === undefined || nxt === cur) break;
+      cur = nxt;
+    }
+
+    // 采样成点列
+    const pts = [];
+    for (const si of order) {
+      const s = segs[si];
+      const seq = s.internal
+        ? edgeProfile(s.a, s.b, s.bulge)
+        : [s.a, s.b];
+      for (const p of seq) {
+        const last = pts[pts.length - 1];
+        if (!last || Math.abs(last[0] - p[0]) > 1e-6 || Math.abs(last[1] - p[1]) > 1e-6) pts.push(p);
+      }
+    }
+
+    pieces.push({
+      id,
+      cells: list,
+      minCol, maxCol, minRow, maxRow,
+      wCells: maxCol - minCol + 1,
+      hCells: maxRow - minRow + 1,
+      // 以拼块重心为原点的轮廓（单位坐标）
+      poly: pts.map((p) => [p[0] - minCol - cx, p[1] - minRow - cy]),
+      // 拼块重心在板面中的位置（单位坐标）
+      anchor: [minCol + cx, minRow + cy],
+    });
+  }
+
+  return { pieces };
+}
+
+/* ---------------- 命中测试 ---------------- */
+function pointInPoly(x, y, pts) {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const xi = pts[i][0], yi = pts[i][1];
+    const xj = pts[j][0], yj = pts[j][1];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/* ---------------- 布局 ---------------- */
+
+/**
+ * 计算板面尺寸 + 零件托盘布局
+ * @returns {{cell, boardX, boardY, boardW, boardH, trayTop, trayH, slots}}
+ */
+function computeLayout(pieces, cols, rows, availW, availH, opts = {}) {
+  const MARGIN = opts.margin ?? 18;
+  const GAP = opts.trayGap ?? 24;
+  const MAX_CELL = opts.maxCell ?? 190;
+  const MIN_CELL = opts.minCell ?? 56;
+
+  const n = pieces.length;
+  const maxHC = Math.max(...pieces.map((p) => p.hCells));
+  const maxWC = Math.max(...pieces.map((p) => p.wCells));
+
+  // 托盘候选：1 行 或 2 行（按宽度贪心均衡分配）
+  const candidates = [];
+  candidates.push([pieces.map((_, i) => i)]);
+  if (n >= 3) {
+    const order = pieces.map((_, i) => i).sort((a, b) => pieces[b].wCells - pieces[a].wCells);
+    const rowsTmp = [[], []];
+    for (const i of order) {
+      const wA = rowsTmp[0].reduce((s, j) => s + pieces[j].wCells, 0);
+      const wB = rowsTmp[1].reduce((s, j) => s + pieces[j].wCells, 0);
+      (wA <= wB ? rowsTmp[0] : rowsTmp[1]).push(i);
+    }
+    if (rowsTmp[1].length) candidates.push(rowsTmp);
+  }
+
+  let best = null;
+  for (const part of candidates) {
+    const rowWC = part.map((row) => row.reduce((s, i) => s + pieces[i].wCells, 0));
+    const maxRowWC = Math.max(...rowWC);
+    const sW = (availW - MARGIN * 2) / Math.max(cols, maxRowWC);
+    const sH = (availH - MARGIN * 2 - GAP) / (rows + part.length * maxHC);
+    const cell = Math.min(sW, sH, MAX_CELL);
+    if (cell < MIN_CELL) continue;
+    if (!best || cell > best.cell) best = { cell, part, rowWC };
+  }
+  if (!best) {
+    // 兜底：塞满可用空间
+    const cell = Math.max(MIN_CELL * 0.6, Math.min((availW - MARGIN * 2) / cols, (availH - MARGIN * 2) / (rows + 2)));
+    best = { cell, part: [pieces.map((_, i) => i)], rowWC: [pieces.reduce((s, p) => s + p.wCells, 0)] };
+  }
+
+  const cell = best.cell;
+  const boardW = cols * cell, boardH = rows * cell;
+  const boardX = (availW - boardW) / 2;
+  const boardY = MARGIN;
+  const trayTop = boardY + boardH + GAP;
+  const trayH = Math.max(40, availH - trayTop - MARGIN);
+
+  // 零件槽位
+  const rnd = mulberry32(20260611);
+  const slots = [];
+  best.part.forEach((row, ri) => {
+    const totalCells = row.reduce((s, i) => s + pieces[i].wCells, 0);
+    const bandH = trayH / best.part.length;
+    let x = (availW - totalCells * cell) / 2;
+    for (const i of row) {
+      const p = pieces[i];
+      const w = p.wCells * cell;
+      slots.push({
+        index: i,
+        x: x + w / 2,
+        y: trayTop + bandH * ri + bandH / 2,
+        jitterX: (rnd() - 0.5) * Math.min(16, cell * 0.14),
+        jitterY: (rnd() - 0.5) * Math.min(14, cell * 0.12),
+        angle: (rnd() - 0.5) * 0.26,
+      });
+      x += w;
+    }
+  });
+
+  return { cell, boardX, boardY, boardW, boardH, trayTop, trayH, slots };
+}
+
+
+/* ===== characters.js ===== */
+/**
+ * 原创角色美术库（纯矢量绘制，Canvas 2D）
+ *
+ * 设计约定：角色在 200×200 的设计坐标系内绘制，x∈[0,200]，y∈[-10,190]。
+ * 统一基线：所有角色的脚底都落在 y=190，方便对齐到同一条地平线。
+ * 幼态比例：大脑袋、小身子、大眼睛；全部原创造型，不涉及任何现有 IP。
+ */
+
+/* ---------------- 基础绘制工具 ---------------- */
+
+function ellipse(ctx, x, y, rx, ry, fill, rot = 0) {
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+}
+
+/** 柔和的不规则身体轮廓 */
+function blob(ctx, cx, cy, rx, ry, wobble, seed) {
+  const n = 8;
+  const pts = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const w = 1 + Math.sin(a * 3 + seed) * wobble + Math.cos(a * 2 - seed) * wobble * 0.5;
+    pts.push([cx + Math.cos(a) * rx * w, cy + Math.sin(a) * ry * w]);
+  }
+  ctx.beginPath();
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  const m0 = mid(pts[n - 1], pts[0]);
+  ctx.moveTo(m0[0], m0[1]);
+  for (let i = 0; i < n; i++) {
+    const cur = pts[i];
+    const nxt = pts[(i + 1) % n];
+    const m = mid(cur, nxt);
+    ctx.quadraticCurveTo(cur[0], cur[1], m[0], m[1]);
+  }
+  ctx.closePath();
+}
+
+/**
+ * 眼睛：深色虹膜 + 小高光。
+ * 注意高光必须小（r*0.3），过大会让眼睛变成「白心空心圈」。
+ */
+function eye(ctx, x, y, r, opts = {}) {
+  const { look = 0, iris = '#2B2320', pupil = true, glint = true } = opts;
+  ellipse(ctx, x, y, r, r * 1.12, iris);
+  if (pupil) ellipse(ctx, x + look * r * 0.14, y + r * 0.06, r * 0.5, r * 0.58, '#241C18');
+  if (glint) {
+    ellipse(ctx, x - r * 0.32 + look * r * 0.14, y - r * 0.36, r * 0.3, r * 0.3, '#FFFFFF');
+    ellipse(ctx, x + r * 0.3 + look * r * 0.14, y + r * 0.3, r * 0.14, r * 0.14, 'rgba(255,255,255,0.8)');
+  }
+}
+
+/** 腮红 */
+function blush(ctx, x, y, rx, ry, color = 'rgba(255,138,128,0.45)') {
+  ellipse(ctx, x, y, rx, ry, color);
+}
+
+/** 微笑弧线 */
+function smile(ctx, x, y, w, h, lw = 5, color = '#4A3B35') {
+  ctx.beginPath();
+  ctx.moveTo(x - w, y);
+  ctx.quadraticCurveTo(x, y + h, x + w, y);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+
+/** 倒 U 形嘴（猫科） */
+function wMouth(ctx, x, y, w, lw = 4.5, color = '#4A3B35') {
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.quadraticCurveTo(x - w / 2, y + w * 0.55, x - w, y);
+  ctx.moveTo(x, y);
+  ctx.quadraticCurveTo(x + w / 2, y + w * 0.55, x + w, y);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+
+/** 圆角矩形 */
+function roundRect(ctx, x, y, w, h, r, fill) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+}
+
+/* ---------------- 角色 1：小狗豆豆 ---------------- */
+function drawDog(ctx) {
+  // 后腿（底边落在 y=190）
+  ellipse(ctx, 72, 177, 16, 13, '#C98A4B');
+  ellipse(ctx, 128, 177, 16, 13, '#C98A4B');
+  // 身体
+  blob(ctx, 100, 140, 44, 38, 0.03, 1.2);
+  ctx.fillStyle = '#F2D2A0';
+  ctx.fill();
+  ellipse(ctx, 100, 150, 27, 26, '#FBEBD0');
+  // 尾巴
+  ctx.beginPath();
+  ctx.moveTo(141, 140);
+  ctx.quadraticCurveTo(166, 132, 160, 108);
+  ctx.strokeStyle = '#C98A4B';
+  ctx.lineWidth = 13;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  // 头
+  ellipse(ctx, 100, 84, 58, 53, '#F5DCB0');
+  // 垂耳画在头之后，向下耷拉并露出轮廓
+  ellipse(ctx, 48, 88, 19, 42, '#A9682F', -0.24);
+  ellipse(ctx, 48, 92, 10, 30, '#8E5228', -0.24);
+  ellipse(ctx, 152, 88, 19, 42, '#A9682F', 0.24);
+  ellipse(ctx, 152, 92, 10, 30, '#8E5228', 0.24);
+  // 口鼻区
+  ellipse(ctx, 100, 108, 33, 26, '#FBEBD0');
+  // 眼睛
+  eye(ctx, 82, 74, 9.5);
+  eye(ctx, 118, 74, 9.5);
+  // 眉毛
+  ctx.beginPath();
+  ctx.moveTo(72, 56); ctx.quadraticCurveTo(82, 50, 92, 55);
+  ctx.moveTo(108, 55); ctx.quadraticCurveTo(118, 50, 128, 56);
+  ctx.strokeStyle = '#A9682F';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  // 鼻子
+  ellipse(ctx, 100, 94, 9, 7, '#4A3B35');
+  // 嘴 + 舌头
+  ctx.beginPath();
+  ctx.moveTo(100, 101); ctx.lineTo(100, 109);
+  ctx.strokeStyle = '#4A3B35';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  smile(ctx, 100, 108, 12, 9, 4);
+  ellipse(ctx, 100, 120, 8, 10, '#F2778A');
+  // 腮红
+  blush(ctx, 66, 98, 11, 7);
+  blush(ctx, 134, 98, 11, 7);
+  // 项圈
+  roundRect(ctx, 78, 134, 44, 13, 6, '#4FA9E8');
+  ellipse(ctx, 100, 150, 7, 8, '#FFD24A');
+}
+
+/* ---------------- 角色 2：小猫团子 ---------------- */
+function drawCat(ctx) {
+  // 后腿
+  ellipse(ctx, 72, 177, 16, 13, '#E58A3C');
+  ellipse(ctx, 128, 177, 16, 13, '#E58A3C');
+  // 身体
+  blob(ctx, 100, 142, 42, 36, 0.03, 2.4);
+  ctx.fillStyle = '#F5A455';
+  ctx.fill();
+  ellipse(ctx, 100, 152, 26, 24, '#FFE2BC');
+  // 尾巴
+  ctx.beginPath();
+  ctx.moveTo(139, 144);
+  ctx.bezierCurveTo(168, 142, 172, 110, 152, 100);
+  ctx.strokeStyle = '#E58A3C';
+  ctx.lineWidth = 12;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  // 头
+  ellipse(ctx, 100, 86, 55, 50, '#F5A455');
+  // 耳朵画在头之后，用更深的橙色与头部区分，避免边界消失
+  ctx.beginPath();
+  ctx.moveTo(54, 58); ctx.lineTo(68, 14); ctx.lineTo(97, 44);
+  ctx.closePath();
+  ctx.fillStyle = '#E8893C'; ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(62, 51); ctx.lineTo(69, 26); ctx.lineTo(86, 45);
+  ctx.closePath();
+  ctx.fillStyle = '#F7A9B8'; ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(146, 58); ctx.lineTo(132, 14); ctx.lineTo(103, 44);
+  ctx.closePath();
+  ctx.fillStyle = '#E8893C'; ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(138, 51); ctx.lineTo(131, 26); ctx.lineTo(114, 45);
+  ctx.closePath();
+  ctx.fillStyle = '#F7A9B8'; ctx.fill();
+  // 额头虎斑
+  ctx.strokeStyle = '#D9822F';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(92, 40); ctx.lineTo(94, 58);
+  ctx.moveTo(100, 36); ctx.lineTo(100, 56);
+  ctx.moveTo(108, 40); ctx.lineTo(106, 58);
+  ctx.stroke();
+  // 口鼻区
+  ellipse(ctx, 100, 108, 30, 22, '#FFE2BC');
+  // 眼睛
+  eye(ctx, 81, 80, 9, { iris: '#3E7D5A' });
+  eye(ctx, 119, 80, 9, { iris: '#3E7D5A' });
+  // 鼻子
+  ctx.beginPath();
+  ctx.moveTo(94, 97); ctx.lineTo(106, 97); ctx.lineTo(100, 105);
+  ctx.closePath();
+  ctx.fillStyle = '#F2778A'; ctx.fill();
+  // 嘴
+  wMouth(ctx, 100, 106, 20);
+  // 胡须
+  ctx.strokeStyle = 'rgba(90,70,60,0.6)';
+  ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  ctx.moveTo(72, 102); ctx.lineTo(38, 94);
+  ctx.moveTo(72, 110); ctx.lineTo(36, 112);
+  ctx.moveTo(128, 102); ctx.lineTo(162, 94);
+  ctx.moveTo(128, 110); ctx.lineTo(164, 112);
+  ctx.stroke();
+  // 腮红
+  blush(ctx, 68, 100, 10, 6);
+  blush(ctx, 132, 100, 10, 6);
+}
+
+/* ---------------- 角色 3：小兔奶糖 ---------------- */
+function drawRabbit(ctx) {
+  // 后腿
+  ellipse(ctx, 70, 176, 18, 14, '#E9DED2');
+  ellipse(ctx, 130, 176, 18, 14, '#E9DED2');
+  // 身体
+  blob(ctx, 100, 144, 40, 34, 0.03, 3.1);
+  ctx.fillStyle = '#F0E4D6';
+  ctx.fill();
+  ellipse(ctx, 100, 154, 25, 22, '#FBF3E9');
+  // 尾巴
+  ellipse(ctx, 146, 150, 14, 14, '#FBF3E9');
+  // 头
+  ellipse(ctx, 100, 92, 53, 48, '#F5EADC');
+  // 长耳朵画在头之后，外耳用较深的米色与头部区分
+  ellipse(ctx, 79, 40, 15, 36, '#DFCFBB', -0.13);
+  ellipse(ctx, 121, 40, 15, 36, '#DFCFBB', 0.13);
+  ellipse(ctx, 79, 42, 8, 27, '#F09BB0', -0.13);
+  ellipse(ctx, 121, 42, 8, 27, '#F09BB0', 0.13);
+  // 口鼻区（比门牙略深，让白色门牙可见）
+  ellipse(ctx, 100, 112, 28, 21, '#EADCCB');
+  // 眼睛
+  eye(ctx, 82, 86, 8.5);
+  eye(ctx, 118, 86, 8.5);
+  // 鼻子
+  ellipse(ctx, 100, 100, 7, 5.5, '#F2778A');
+  // 嘴
+  ctx.beginPath();
+  ctx.moveTo(100, 106); ctx.lineTo(100, 113);
+  ctx.strokeStyle = '#4A3B35'; ctx.lineWidth = 3.4; ctx.stroke();
+  smile(ctx, 100, 112, 9, 7, 3.4);
+  // 门牙（白色 + 描边，避免与口鼻糊在一起）
+  roundRect(ctx, 93, 116, 6, 12, 2.5, '#FFFFFF');
+  roundRect(ctx, 101, 116, 6, 12, 2.5, '#FFFFFF');
+  ctx.strokeStyle = '#D8CFC4';
+  ctx.lineWidth = 1.4;
+  ctx.strokeRect(93.7, 116.7, 4.6, 10.6);
+  ctx.strokeRect(101.7, 116.7, 4.6, 10.6);
+  // 腮红
+  blush(ctx, 70, 104, 11, 7);
+  blush(ctx, 130, 104, 11, 7);
+}
+
+/* ---------------- 角色 4：企鹅冰冰 ---------------- */
+function drawPenguin(ctx) {
+  // 脚
+  ellipse(ctx, 78, 182, 20, 8, '#F5A03C');
+  ellipse(ctx, 122, 182, 20, 8, '#F5A03C');
+  // 身体
+  blob(ctx, 100, 124, 46, 54, 0.02, 4.3);
+  ctx.fillStyle = '#33455C';
+  ctx.fill();
+  // 肚皮
+  ellipse(ctx, 100, 130, 33, 42, '#FBFBF7');
+  // 鳍
+  ellipse(ctx, 50, 124, 12, 30, '#2A3A4E', -0.28);
+  ellipse(ctx, 150, 124, 12, 30, '#2A3A4E', 0.28);
+  // 头
+  ellipse(ctx, 100, 64, 44, 40, '#33455C');
+  // 脸部白斑
+  ellipse(ctx, 83, 70, 17, 20, '#FBFBF7');
+  ellipse(ctx, 117, 70, 17, 20, '#FBFBF7');
+  // 眼睛（实心深色 + 高光）
+  eye(ctx, 83, 68, 7.5, { pupil: false });
+  eye(ctx, 117, 68, 7.5, { pupil: false });
+  // 喙
+  ctx.beginPath();
+  ctx.moveTo(100, 80); ctx.lineTo(88, 94); ctx.quadraticCurveTo(100, 104, 112, 94);
+  ctx.closePath();
+  ctx.fillStyle = '#F5A03C'; ctx.fill();
+  // 腮红
+  blush(ctx, 68, 92, 9, 5.5);
+  blush(ctx, 132, 92, 9, 5.5);
+}
+
+/* ---------------- 角色 5：熊猫圆圆 ---------------- */
+function drawPanda(ctx) {
+  // 后腿
+  ellipse(ctx, 72, 177, 16, 13, '#3A3A3A');
+  ellipse(ctx, 128, 177, 16, 13, '#3A3A3A');
+  // 身体
+  blob(ctx, 100, 142, 43, 37, 0.03, 5.5);
+  ctx.fillStyle = '#F7F5F0';
+  ctx.fill();
+  // 手臂
+  ellipse(ctx, 52, 142, 14, 26, '#3A3A3A', 0.2);
+  ellipse(ctx, 148, 142, 14, 26, '#3A3A3A', -0.2);
+  // 耳朵（高于头顶，露出轮廓）
+  ellipse(ctx, 62, 36, 17, 17, '#3A3A3A');
+  ellipse(ctx, 138, 36, 17, 17, '#3A3A3A');
+  // 头
+  ellipse(ctx, 100, 82, 55, 50, '#F7F5F0');
+  // 黑眼圈
+  ellipse(ctx, 78, 82, 17, 20, '#3A3A3A', -0.22);
+  ellipse(ctx, 122, 82, 17, 20, '#3A3A3A', 0.22);
+  // 眼睛（白眼白 + 黑瞳孔）
+  ellipse(ctx, 79, 80, 8.5, 9.5, '#FFFFFF');
+  ellipse(ctx, 80, 82, 4.4, 5, '#2A2A2A');
+  ellipse(ctx, 77.5, 78, 2.4, 2.4, '#FFFFFF');
+  ellipse(ctx, 121, 80, 8.5, 9.5, '#FFFFFF');
+  ellipse(ctx, 120, 82, 4.4, 5, '#2A2A2A');
+  ellipse(ctx, 117.5, 78, 2.4, 2.4, '#FFFFFF');
+  // 鼻子
+  ellipse(ctx, 100, 102, 9, 6.5, '#3A3A3A');
+  // 嘴
+  ctx.beginPath();
+  ctx.moveTo(100, 108); ctx.lineTo(100, 114);
+  ctx.strokeStyle = '#4A3B35'; ctx.lineWidth = 3.6; ctx.stroke();
+  smile(ctx, 100, 113, 11, 8, 3.6);
+  // 腮红
+  blush(ctx, 66, 104, 11, 6.5);
+  blush(ctx, 134, 104, 11, 6.5);
+}
+
+/* ---------------- 角色 6：小鸡啾啾 ---------------- */
+function drawChick(ctx) {
+  // 脚
+  ctx.strokeStyle = '#F5A03C';
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(88, 172); ctx.lineTo(88, 186);
+  ctx.moveTo(81, 189); ctx.lineTo(88, 186); ctx.lineTo(95, 189);
+  ctx.moveTo(112, 172); ctx.lineTo(112, 186);
+  ctx.moveTo(105, 189); ctx.lineTo(112, 186); ctx.lineTo(119, 189);
+  ctx.stroke();
+  // 身体
+  blob(ctx, 100, 126, 50, 50, 0.02, 6.2);
+  ctx.fillStyle = '#FFD65C';
+  ctx.fill();
+  // 翅膀
+  ellipse(ctx, 50, 128, 15, 27, '#F7C23F', -0.18);
+  ellipse(ctx, 150, 128, 15, 27, '#F7C23F', 0.18);
+  // 头
+  ellipse(ctx, 100, 90, 47, 43, '#FFDD6E');
+  // 呆毛画在头之后，才不会被盖住
+  ctx.beginPath();
+  ctx.moveTo(92, 58);
+  ctx.quadraticCurveTo(84, 28, 108, 14);
+  ctx.quadraticCurveTo(112, 36, 106, 56);
+  ctx.closePath();
+  ctx.fillStyle = '#F7C23F'; ctx.fill();
+  // 眼睛
+  eye(ctx, 84, 86, 8);
+  eye(ctx, 116, 86, 8);
+  // 喙
+  ctx.beginPath();
+  ctx.moveTo(90, 100); ctx.lineTo(110, 100); ctx.lineTo(100, 114);
+  ctx.closePath();
+  ctx.fillStyle = '#F5A03C'; ctx.fill();
+  // 腮红
+  blush(ctx, 70, 104, 10, 6.5, 'rgba(255,140,120,0.5)');
+  blush(ctx, 130, 104, 10, 6.5, 'rgba(255,140,120,0.5)');
+}
+const CHARACTERS = {
+  dog: drawDog,
+  cat: drawCat,
+  rabbit: drawRabbit,
+  penguin: drawPenguin,
+  panda: drawPanda,
+  chick: drawChick,
+};
+
+/** 每个角色的描边色：需与各自背景保持足够明度差，才能把角色「托」出来 */
+const OUTLINE = {
+  dog: '#7A4A22',
+  cat: '#A85A18',
+  rabbit: '#6B5741',
+  penguin: '#1E2B38',
+  panda: '#242424',
+  chick: '#8A5A12',
+};
+
+/* ---------------- 渲染管线 ---------------- */
+
+/** 设计坐标系：x∈[0,200]，y∈[-10,190]，脚底基线 y=190 */
+const DESIGN = { w: 200, top: -10, bottom: 190, base: 190 };
+
+const K = 4;              // 内部超采样倍率
+const OUTLINE_W = 2.4;    // 描边宽度（设计单位）
+
+/** 把角色渲染到离屏画布（超采样） */
+function renderCharacterCanvas(kind) {
+  const w = DESIGN.w * K;
+  const h = (DESIGN.bottom - DESIGN.top) * K;
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const cx = c.getContext('2d');
+  cx.save();
+  cx.translate(0, -DESIGN.top * K);
+  cx.scale(K, K);
+  (CHARACTERS[kind] || drawDog)(cx);
+  cx.restore();
+  return c;
+}
+
+/**
+ * 生成带描边的角色图：
+ * 把角色转成剪影 → 多方向平移叠画得到膨胀轮廓 → 覆盖原图。
+ * 只有整体外轮廓会出现描边，内部重叠处不会出现多余线条。
+ */
+function withOutline(charC, color) {
+  const w = charC.width, h = charC.height;
+  const sil = document.createElement('canvas');
+  sil.width = w; sil.height = h;
+  const sctx = sil.getContext('2d');
+  sctx.drawImage(charC, 0, 0);
+  sctx.globalCompositeOperation = 'source-in';
+  sctx.fillStyle = color;
+  sctx.fillRect(0, 0, w, h);
+
+  const out = document.createElement('canvas');
+  out.width = w; out.height = h;
+  const octx = out.getContext('2d');
+  const R = OUTLINE_W * K;
+  const N = 24;
+  for (let i = 0; i < N; i++) {
+    const a = (i / N) * Math.PI * 2;
+    octx.drawImage(sil, Math.cos(a) * R, Math.sin(a) * R);
+  }
+  octx.drawImage(charC, 0, 0);
+  return out;
+}
+
+/** 计算角色缩放与落地位置：保证内容完整落在画布内且统一贴地 */
+function characterLayout(w, h) {
+  const ground = h * 0.87;
+  const contentH = DESIGN.base - DESIGN.top;   // 200
+  const unitH = (ground - h * 0.05) / contentH;
+  const unitW = (w * 0.56) / (DESIGN.w * 0.65);
+  const unit = Math.min(unitH, unitW);
+  return { unit, ground, x: w / 2 - DESIGN.w * 0.5 * unit };
+}
+
+/* ---------------- 场景背景 ---------------- */
+
+/**
+ * 场景配色。注意色相要跟角色「拉开距离」：
+ * 白兔配紫、黄鸡配薄荷绿、熊猫配浅绿、企鹅配冰蓝，都是互补或高明度差方案。
+ */
+const PALETTES = {
+  meadow:  { sky1: '#CFEBFF', sky2: '#EAF7FF', hill: '#A8DC8C', ground: '#8FCB74', accent: '#FFD24A', cloud: '#FFFFFF' },
+  sunny:   { sky1: '#FFE9B8', sky2: '#FFF6E0', hill: '#FFC97A', ground: '#F5B75C', accent: '#FF8C42', cloud: '#FFFFFF' },
+  lilac:   { sky1: '#E0D6FF', sky2: '#F5F0FF', hill: '#C3B2F7', ground: '#A490EA', accent: '#7B5AE0', cloud: '#FFFFFF' },
+  polar:   { sky1: '#A8D8FF', sky2: '#E2F3FF', hill: '#BFE0F2', ground: '#96CBE6', accent: '#3FA9E0', cloud: '#FFFFFF' },
+  bamboo:  { sky1: '#CFEFC0', sky2: '#EFFBE8', hill: '#A6DC8C', ground: '#83C96F', accent: '#4FC08A', cloud: '#FFFFFF' },
+  aqua:    { sky1: '#B2EFE2', sky2: '#E3FBF4', hill: '#83D8C2', ground: '#5FC0A6', accent: '#FFB03A', cloud: '#FFFFFF' },
+};
+
+/**
+ * 绘制完整场景（背景 + 角色）到给定画布
+ */
+function drawScene(ctx, w, h, kind, pal) {
+  const p = PALETTES[pal] || PALETTES.meadow;
+
+  // 天空渐变
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, p.sky1);
+  g.addColorStop(1, p.sky2);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+
+  // 太阳（放在右上角，避开角色）
+  ctx.beginPath();
+  ctx.arc(w * 0.87, h * 0.1, Math.min(w, h) * 0.075, 0, Math.PI * 2);
+  ctx.fillStyle = p.accent;
+  ctx.globalAlpha = 0.9;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // 云朵（分列左右，避开中间的角色）
+  const cloud = (cx, cy, s) => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, s * 0.5, 0, Math.PI * 2);
+    ctx.arc(cx + s * 0.42, cy + s * 0.1, s * 0.38, 0, Math.PI * 2);
+    ctx.arc(cx - s * 0.42, cy + s * 0.12, s * 0.34, 0, Math.PI * 2);
+    ctx.arc(cx + s * 0.08, cy - s * 0.28, s * 0.36, 0, Math.PI * 2);
+    ctx.fillStyle = p.cloud;
+    ctx.fill();
+  };
+  cloud(w * 0.13, h * 0.15, Math.min(w, h) * 0.17);
+  cloud(w * 0.87, h * 0.32, Math.min(w, h) * 0.11);
+
+  // 远山
+  ctx.beginPath();
+  ctx.moveTo(0, h * 0.72);
+  ctx.quadraticCurveTo(w * 0.25, h * 0.56, w * 0.52, h * 0.7);
+  ctx.quadraticCurveTo(w * 0.78, h * 0.82, w, h * 0.66);
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  ctx.fillStyle = p.hill;
+  ctx.fill();
+
+  // 草地
+  ctx.beginPath();
+  ctx.moveTo(0, h * 0.84);
+  ctx.quadraticCurveTo(w * 0.5, h * 0.78, w, h * 0.85);
+  ctx.lineTo(w, h);
+  ctx.lineTo(0, h);
+  ctx.closePath();
+  ctx.fillStyle = p.ground;
+  ctx.fill();
+
+  // 小草
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = Math.max(2, h * 0.008);
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 7; i++) {
+    const x = (w / 7) * i + w * 0.03;
+    const y = h * 0.93;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - 3, y - h * 0.05);
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 4, y - h * 0.06);
+    ctx.stroke();
+  }
+
+  // 角色
+  const { unit, ground, x } = characterLayout(w, h);
+  const charImg = withOutline(renderCharacterCanvas(kind), OUTLINE[kind] || '#5A4034');
+
+  // 落地阴影
+  ctx.beginPath();
+  ctx.ellipse(x + DESIGN.w * 0.5 * unit, ground + unit * 1.5, unit * 34, unit * 5.5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(60,40,30,0.16)';
+  ctx.fill();
+
+  ctx.drawImage(charImg, x, ground - (DESIGN.base - DESIGN.top) * unit, DESIGN.w * unit, (DESIGN.bottom - DESIGN.top) * unit);
+}
+
+/**
+ * 生成角色的缩略图（用于关卡选择）
+ */
+function drawThumb(ctx, w, h, kind, pal) {
+  const p = PALETTES[pal] || PALETTES.meadow;
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, p.sky1);
+  g.addColorStop(1, p.sky2);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+
+  const { unit, ground, x } = characterLayout(w, h);
+  const charImg = withOutline(renderCharacterCanvas(kind), OUTLINE[kind] || '#5A4034');
+  ctx.drawImage(charImg, x, ground - (DESIGN.base - DESIGN.top) * unit, DESIGN.w * unit, (DESIGN.bottom - DESIGN.top) * unit);
+}
+
+
+/* ===== audio.js ===== */
+/**
+ * 音频模块：程序化合成音效 + 背景音乐 + 中文语音
+ * 零素材依赖，全部由 Web Audio / SpeechSynthesis 实时生成。
+ */
+const Audio2 = (() => {
+  let ac = null;
+  let master = null;
+  let musicGain = null;
+  let sfxGain = null;
+  let musicTimer = null;
+  let musicStep = 0;
+  let enabled = true;
+  let unlocked = false;
+
+  /** 必须在用户手势中调用，浏览器才允许播放声音 */
+  function unlock() {
+    if (unlocked) return;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      ac = new AC();
+      master = ac.createGain();
+      master.gain.value = 0.9;
+      master.connect(ac.destination);
+      musicGain = ac.createGain();
+      musicGain.gain.value = 0.16;
+      musicGain.connect(master);
+      sfxGain = ac.createGain();
+      sfxGain.gain.value = 0.4;
+      sfxGain.connect(master);
+      unlocked = true;
+      if (ac.state === 'suspended') ac.resume();
+    } catch (e) {
+      console.warn('音频初始化失败', e);
+    }
+  }
+
+  function now() { return ac ? ac.currentTime : 0; }
+
+  /** 单个音：波形 + 频率包络 + 音量包络 */
+  function tone(freq, dur = 0.12, type = 'sine', vol = 0.3, delay = 0, dest = null) {
+    if (!ac || !enabled) return;
+    const t0 = now() + delay;
+    const osc = ac.createOscillator();
+    const g = ac.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(vol, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g).connect(dest || sfxGain);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }
+
+  /** 频率滑音，用于「吸住」的音效 */
+  function slide(f0, f1, dur = 0.18, type = 'sine', vol = 0.3, delay = 0) {
+    if (!ac || !enabled) return;
+    const t0 = now() + delay;
+    const osc = ac.createOscillator();
+    const g = ac.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(f0, t0);
+    osc.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(vol, t0 + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g).connect(sfxGain);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }
+
+  /** 白噪声，用于轻柔的「哒」声 */
+  function noise(dur = 0.08, vol = 0.2, freq = 1400, delay = 0) {
+    if (!ac || !enabled) return;
+    const t0 = now() + delay;
+    const n = Math.floor(ac.sampleRate * dur);
+    const buf = ac.createBuffer(1, n, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const src = ac.createBufferSource();
+    src.buffer = buf;
+    const f = ac.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = freq;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(f).connect(g).connect(sfxGain);
+    src.start(t0);
+  }
+
+  /* ---------------- 音效 ---------------- */
+
+  const sfx = {
+    /** 拿起拼块：轻快的「啵」 */
+    pick() { slide(420, 720, 0.11, 'sine', 0.22); noise(0.05, 0.08, 2200); },
+    /** 放下但没对准：闷闷的一声 */
+    drop() { tone(200, 0.09, 'sine', 0.16); noise(0.05, 0.06, 700); },
+    /** 吸附成功：清脆的双音「叮」 */
+    snap() {
+      tone(880, 0.16, 'sine', 0.26);
+      tone(1320, 0.22, 'sine', 0.16, 0.045);
+      noise(0.04, 0.05, 3200);
+    },
+    /** 拼完一块的庆祝音 */
+    complete() {
+      [523.25, 659.25, 783.99].forEach((f, i) => tone(f, 0.3, 'triangle', 0.24, i * 0.08));
+    },
+    /** 通关小号声 */
+    win() {
+      const notes = [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5];
+      notes.forEach((f, i) => {
+        tone(f, 0.34, 'triangle', 0.26, i * 0.13);
+        tone(f * 2, 0.2, 'sine', 0.1, i * 0.13);
+      });
+    },
+    /** 星星出现 */
+    star(i = 0) {
+      tone(1046 + i * 220, 0.22, 'sine', 0.24, i * 0.13);
+      tone(1568 + i * 220, 0.18, 'sine', 0.12, i * 0.13 + 0.04);
+    },
+    /** 按钮点击 */
+    tap() { tone(660, 0.07, 'triangle', 0.18); },
+    /** 页面切换 */
+    swap() { slide(520, 780, 0.12, 'triangle', 0.15); },
+  };
+
+  /* ---------------- 背景音乐 ---------------- */
+  /* 轻柔的八音盒式循环，用五声音阶避免任何旋律版权问题 */
+  const SCALE = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5, 880.0, 783.99];
+  const BASS = [261.63, 293.66, 329.63, 392.0];
+  const LOOP_LEN = 32;
+
+  function playMusicStep(step) {
+    if (!ac || !enabled) return;
+    const i = step % LOOP_LEN;
+    // 主旋律：每 4 步一个音
+    if (i % 4 === 0) {
+      const n = SCALE[(step / 4 | 0) % SCALE.length];
+      tone(n, 0.42, 'sine', 0.5, 0, musicGain);
+      tone(n * 2, 0.2, 'sine', 0.16, 0.01, musicGain);
+    }
+    // 低音：每 8 步一个
+    if (i % 8 === 0) {
+      const b = BASS[(step / 8 | 0) % BASS.length];
+      tone(b, 0.7, 'triangle', 0.4, 0, musicGain);
+    }
+  }
+
+  function musicTick() {
+    if (!ac || !enabled) return;
+    playMusicStep(musicStep);
+    musicStep++;
+  }
+
+  const music = {
+    start() {
+      if (!unlocked || musicTimer) return;
+      musicStep = 0;
+      playMusicStep(musicStep++);
+      musicTimer = setInterval(musicTick, 460);
+    },
+    stop() {
+      if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+    },
+  };
+
+  /* ---------------- 中文语音 ---------------- */
+
+  const voice = {
+    enabled: true,
+    _voice: null,
+    _init() {
+      if (this._voice !== null) return;
+      this._voice = false;
+      try {
+        const pick = () => {
+          const vs = speechSynthesis.getVoices();
+          if (!vs || !vs.length) return;
+          // 优先选择中文普通话女声
+          this._voice = vs.find(v => /zh[-_]?CN/i.test(v.lang) && /female|女|Tingting|Yaoyao/i.test(v.name))
+            || vs.find(v => /zh[-_]?CN/i.test(v.lang))
+            || vs.find(v => /^zh/i.test(v.lang))
+            || false;
+        };
+        pick();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+          speechSynthesis.onvoiceschanged = pick;
+        }
+      } catch (e) {
+        this._voice = false;
+      }
+    },
+    /** 说一句话；rate 调慢一点更适合幼儿 */
+    say(text, rate = 0.85, pitch = 1.15) {
+      if (!this.enabled || !text) return;
+      this._init();
+      try {
+        if (!('speechSynthesis' in window)) return;
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'zh-CN';
+        u.rate = rate;
+        u.pitch = pitch;
+        u.volume = 1;
+        if (this._voice && this._voice !== false) u.voice = this._voice;
+        speechSynthesis.speak(u);
+      } catch (e) {
+        /* 语音不可用时静默降级 */
+      }
+    },
+    stop() {
+      try { speechSynthesis.cancel(); } catch (e) { /* ignore */ }
+    },
+  };
+
+  return {
+    unlock,
+    sfx,
+    music,
+    voice,
+    get enabled() { return enabled; },
+    setEnabled(v) {
+      enabled = v;
+      if (!v) music.stop();
+    },
+    setVoiceEnabled(v) {
+      voice.enabled = v;
+      if (!v) voice.stop();
+    },
+    get voiceEnabled() { return voice.enabled; },
+  };
+})();
+
+
+/* ===== puzzle-game.js ===== */
+/**
+ * 拼图游戏主体
+ * 依赖：puzzle-parts.js（几何）、characters.js（美术）、audio.js（音效语音）
+ */
+
+
+
+/* ==================== CONFIG ==================== */
+const CONFIG = {
+  STEP: 1 / 60,
+  SNAP_RATIO: 0.42,        // 吸附判定：与目标距离小于目标格尺寸的比例
+  GRAB_RADIUS: 46,         // 手指抓取判定半径（像素）
+  LIFT_SCALE: 1.07,        // 拿起时放大
+  LIFT_SHADOW: 22,         // 拿起时阴影
+  REST_SHADOW: 8,          // 平放时阴影
+  MAX_DPR: 2,
+  STAR_THRESHOLDS: [3, 6], // 尝试次数阈值：≤3 星，≤6 两星，更少一星
+  SAVE_KEY: 'puzzle_kids_progress_v1',
+  SOUND_KEY: 'puzzle_kids_sound_v1',
+};
+/* ================================================ */
+
+const $ = (s) => document.querySelector(s);
+const canvas = $('#game');
+const ctx = canvas.getContext('2d');
+
+let W = 0, H = 0, dpr = 1;
+
+/* ---------------- 关卡与运行时状态 ---------------- */
+
+const State = {
+  MENU: 'menu',
+  PLAY: 'play',
+  COMPLETE: 'complete',
+};
+
+let state = State.MENU;
+let levelIndex = 0;
+let level = null;
+let pieces = [];
+let layout = null;
+let boardCanvas = null;      // 关卡完整画面（离屏）
+let sceneCanvas = null;      // 场景参考图（离屏）
+let placedCount = 0;
+let attempts = 0;
+let dragging = null;         // {piece, dx, dy}
+let stars = loadProgress();
+let soundOn = loadSound();
+
+const particles = [];
+const confetti = [];
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(CONFIG.SAVE_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    return Array.isArray(obj) ? obj : [];
+  } catch (e) { return []; }
+}
+function saveProgress() {
+  try { localStorage.setItem(CONFIG.SAVE_KEY, JSON.stringify(stars)); } catch (e) { /* ignore */ }
+}
+function loadSound() {
+  try { return localStorage.getItem(CONFIG.SOUND_KEY) !== '0'; } catch (e) { return true; }
+}
+function saveSound() {
+  try { localStorage.setItem(CONFIG.SOUND_KEY, soundOn ? '1' : '0'); } catch (e) { /* ignore */ }
+}
+
+/* ---------------- 关卡加载 ---------------- */
+
+function loadLevel(idx) {
+  levelIndex = clamp(idx, 0, LEVELS.length - 1);
+  level = LEVELS[levelIndex];
+  const built = buildLevel(level, level.id);
+  pieces = built.pieces;
+  placedCount = 0;
+  attempts = 0;
+  particles.length = 0;
+  confetti.length = 0;
+  dragging = null;
+
+  // 预渲染关卡画面与场景参考图
+  const pw = 512;
+  const ph = Math.round(pw * (level.rows / level.cols));
+  sceneCanvas = document.createElement('canvas');
+  sceneCanvas.width = pw;
+  sceneCanvas.height = ph;
+  drawScene(sceneCanvas.getContext('2d'), pw, ph, level.kind, level.pal);
+
+  boardCanvas = document.createElement('canvas');
+  boardCanvas.width = pw;
+  boardCanvas.height = ph;
+  const bctx = boardCanvas.getContext('2d');
+  bctx.drawImage(sceneCanvas, 0, 0);
+
+  // 为每块生成带阴影的离屏贴图（阴影随拿起状态变化，这里只画本体）
+  for (const p of pieces) {
+    p.home = { x: p.anchor[0], y: p.anchor[1] };  // 单位坐标
+    p.pos = { x: 0, y: 0 };                      // 实际位置（像素）
+    p.angle = 0;
+    p.placed = false;
+    p.pop = 0;          // 吸附时的弹跳动画
+    p.glow = 0;         // 靠近目标时的提示高亮
+    p.bitmap = null;    // 离屏贴图
+  }
+
+  layout = computeLayout(pieces, level.cols, level.rows, W, H, {
+    margin: 14, trayGap: 18, maxCell: 168, minCell: 48,
+  });
+
+  // 摆放散落的拼块
+  for (const s of layout.slots) {
+    const p = pieces[s.index];
+    p.pos.x = s.x + s.jitterX;
+    p.pos.y = s.y + s.jitterY;
+    p.angle = s.angle;
+    p.home.x = layout.boardX + p.anchor[0] * layout.cell;
+    p.home.y = layout.boardY + p.anchor[1] * layout.cell;
+    p.bitmap = renderPieceBitmap(p);
+  }
+
+  // HUD 已显示，stage 高度可能与初始不同：重排一次并推开重叠的块
+  resize();
+  separatePieces();
+
+  updateHUD();
+  Audio2.voice.say(`第${levelIndex + 1}关，${level.name}，把拼图拼起来吧`);
+}
+
+/** 把一块拼图渲染成离屏贴图（含该块在场景中的图像内容） */
+function renderPieceBitmap(p) {
+  const cell = layout.cell;
+  const bmp = document.createElement('canvas');
+  bmp.width = Math.ceil(cell * 2.6);
+  bmp.height = Math.ceil(cell * 2.6);
+  const c = bmp.getContext('2d');
+  const cx = bmp.width / 2, cy = bmp.height / 2;
+
+  // 1) 裁剪出这块拼图的外形
+  c.save();
+  c.beginPath();
+  const poly = p.poly;
+  poly.forEach((pt, i) => {
+    const x = cx + pt[0] * cell, y = cy + pt[1] * cell;
+    i === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+  });
+  c.closePath();
+  c.clip();
+
+  // 2) 把场景画进裁剪区。
+  //    用变换矩阵而非 drawImage 的裁剪参数：拼块边缘会略微超出场景边界，
+  //    变换方式不会因源矩形越界而缩放变形。
+  const cellInScene = sceneCanvas.width / level.cols;  // 场景中 1 格 = 多少像素
+  const k = cell / cellInScene;                        // 场景像素 → 贴图像素
+  c.translate(cx, cy);
+  c.scale(k, k);
+  c.translate(-p.anchor[0] * cellInScene, -p.anchor[1] * cellInScene);
+  c.drawImage(sceneCanvas, 0, 0);
+  c.restore();
+
+  // 2) 描边：沿同一条多边形画一圈浅色边，模拟拼图块的立体感
+  c.save();
+  c.beginPath();
+  poly.forEach((pt, i) => {
+    const x = cx + pt[0] * cell, y = cy + pt[1] * cell;
+    i === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+  });
+  c.closePath();
+  c.strokeStyle = 'rgba(255,255,255,0.92)';
+  c.lineWidth = Math.max(3, cell * 0.055);
+  c.lineJoin = 'round';
+  c.stroke();
+  c.strokeStyle = 'rgba(120,90,60,0.28)';
+  c.lineWidth = Math.max(1.5, cell * 0.02);
+  c.stroke();
+  c.restore();
+
+  return bmp;
+}
+
+/* ---------------- 布局与尺寸 ---------------- */
+
+function resize() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  dpr = Math.min(window.devicePixelRatio || 1, CONFIG.MAX_DPR);
+  W = Math.max(320, Math.floor(rect.width));
+  H = Math.max(320, Math.floor(rect.height));
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  if (level) {
+    layout = computeLayout(pieces, level.cols, level.rows, W, H, {
+      margin: 14, trayGap: 18, maxCell: 168, minCell: 48,
+    });
+    // 重新计算归位坐标；已归位的块直接对齐，未归位的块按比例重新散落
+    for (const p of pieces) {
+      p.home.x = layout.boardX + p.anchor[0] * layout.cell;
+      p.home.y = layout.boardY + p.anchor[1] * layout.cell;
+    }
+    layout.slots.forEach((s) => {
+      const p = pieces[s.index];
+      if (!p.placed) {
+        p.pos.x = s.x + s.jitterX;
+        p.pos.y = s.y + s.jitterY;
+        p.angle = s.angle;
+      }
+      p.bitmap = renderPieceBitmap(p);
+    });
+    // 散开可能互相重叠的块
+    separatePieces();
+  }
+}
+
+/**
+ * 推开互相重叠的拼块。
+ * 拼图块带榫卯且有随机旋转，实际占位比格子大，需要按真实轮廓做分离。
+ */
+function separatePieces() {
+  const cell = layout.cell;
+  const gap = cell * 0.16;
+  const free = pieces.filter((p) => !p.placed);
+  if (free.length < 2) return;
+
+  // 每块的近似包围半径（含榫卯与旋转外扩）
+  const radius = (p) => {
+    let r = 0;
+    for (const pt of p.poly) {
+      const lx = pt[0] * cell, ly = pt[1] * cell;
+      const cos = Math.cos(p.angle), sin = Math.sin(p.angle);
+      const rx = lx * cos - ly * sin, ry = lx * sin + ly * cos;
+      r = Math.max(r, Math.hypot(rx, ry));
+    }
+    return r;
+  };
+
+  for (let iter = 0; iter < 60; iter++) {
+    let moved = false;
+    for (let i = 0; i < free.length; i++) {
+      for (let j = i + 1; j < free.length; j++) {
+        const a = free[i], b = free[j];
+        let dx = b.pos.x - a.pos.x, dy = b.pos.y - a.pos.y;
+        let dist = Math.hypot(dx, dy);
+        const need = radius(a) + radius(b) + gap;
+        if (dist >= need) continue;
+        if (dist < 0.001) { dx = (Math.random() - 0.5); dy = (Math.random() - 0.5); dist = 0.01; }
+        const push = (need - dist) / 2;
+        const ux = dx / dist, uy = dy / dist;
+        a.pos.x -= ux * push; a.pos.y -= uy * push;
+        b.pos.x += ux * push; b.pos.y += uy * push;
+        moved = true;
+      }
+    }
+    // 限制在画布内
+    for (const p of free) {
+      p.pos.x = clamp(p.pos.x, layout.boardX + layout.cell * 0.2, W - layout.cell * 0.2);
+      p.pos.y = clamp(p.pos.y, layout.trayTop + layout.cell * 0.15, H - layout.cell * 0.25);
+    }
+    if (!moved) break;
+  }
+}
+
+/* ---------------- 命中检测 ---------------- */
+
+/** 判断屏幕点是否落在某块拼图上 */
+function hitTest(x, y) {
+  for (let i = pieces.length - 1; i >= 0; i--) {
+    const p = pieces[i];
+    if (p.placed) continue;
+    // 逆变换到拼块局部坐标
+    const dx = x - p.pos.x, dy = y - p.pos.y;
+    const cos = Math.cos(-p.angle), sin = Math.sin(-p.angle);
+    const lx = dx * cos - dy * sin;
+    const ly = dx * sin + dy * cos;
+    const inside = pointInPoly(lx / layout.cell, ly / layout.cell, p.poly);
+    if (inside) return p;
+  }
+  // 没命中精确形状时，落在轨迹板上的任意一块都允许抓（对小手指友好）
+  for (let i = pieces.length - 1; i >= 0; i--) {
+    const p = pieces[i];
+    if (p.placed) continue;
+    const dx = x - p.pos.x, dy = y - p.pos.y;
+    const r = Math.hypot(dx, dy);
+    if (r < CONFIG.GRAB_RADIUS + layout.cell * 0.3) return p;
+  }
+  return null;
+}
+
+/* ---------------- 交互 ---------------- */
+
+function onPointerDown(e) {
+  if (state !== State.PLAY) return;
+  Audio2.unlock();
+  const pt = pointerPos(e);
+  const p = hitTest(pt.x, pt.y);
+  if (!p) return;
+  e.preventDefault();
+  canvas.setPointerCapture?.(e.pointerId);
+  dragging = { piece: p, dx: p.pos.x - pt.x, dy: p.pos.y - pt.y, moved: false };
+  Audio2.sfx.pick();
+  updateHUD();
+}
+
+function onPointerMove(e) {
+  if (!dragging) return;
+  e.preventDefault();
+  const pt = pointerPos(e);
+  const p = dragging.piece;
+  p.pos.x = pt.x + dragging.dx;
+  p.pos.y = pt.y + dragging.dy;
+  dragging.moved = true;
+  // 靠近目标时给一点磁吸提示（不完全吸附，避免误操作）
+  const d = Math.hypot(p.pos.x - p.home.x, p.pos.y - p.home.y);
+  p.glow = clamp(1 - d / (layout.cell * 1.2), 0, 1);
+}
+
+function onPointerUp(e) {
+  if (!dragging) return;
+  const p = dragging.piece;
+  dragging = null;
+  p.glow = 0;
+
+  const cell = layout.cell;
+  const d = Math.hypot(p.pos.x - p.home.x, p.pos.y - p.home.y);
+  const snapDist = cell * CONFIG.SNAP_RATIO;
+
+  if (d < snapDist) {
+    // 吸附归位
+    p.placed = true;
+    p.pos.x = p.home.x;
+    p.pos.y = p.home.y;
+    p.angle = 0;
+    p.pop = 1;
+    placedCount++;
+    Audio2.sfx.snap();
+    spawnParticles(p.pos.x, p.pos.y, '#FFD24A');
+    if (placedCount === pieces.length) {
+      setTimeout(() => onLevelComplete(), 620);
+    }
+  } else {
+    // 没对准，回弹到托盘区
+    const inTray = p.pos.y > layout.trayTop - layout.cell * 0.3;
+    if (!inTray) {
+      p.pos.y = Math.min(H - layout.cell * 0.6, p.pos.y);
+    }
+    Audio2.sfx.drop();
+  }
+  updateHUD();
+}
+
+function pointerPos(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
+}
+
+/* ---------------- 粒子与彩带 ---------------- */
+
+function spawnParticles(x, y, color) {
+  for (let i = 0; i < 12; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = 60 + Math.random() * 140;
+    particles.push({
+      x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40,
+      life: 0.55, size: 3 + Math.random() * 4, color,
+    });
+  }
+}
+
+function spawnConfetti() {
+  const colors = ['#FF6B6B', '#FFD24A', '#4FC08A', '#4FA9E8', '#C470C9', '#FF9F45'];
+  for (let i = 0; i < 90; i++) {
+    confetti.push({
+      x: Math.random() * W,
+      y: -20 - Math.random() * H * 0.5,
+      vx: (Math.random() - 0.5) * 90,
+      vy: 90 + Math.random() * 140,
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 9,
+      size: 7 + Math.random() * 7,
+      color: colors[(Math.random() * colors.length) | 0],
+      life: 4,
+    });
+  }
+}
+
+/* ---------------- 关卡完成 ---------------- */
+
+function onLevelComplete() {
+  state = State.COMPLETE;
+  Audio2.sfx.win();
+  Audio2.voice.say(`${level.name}拼好啦，你真棒！`);
+  spawnConfetti();
+
+  // 星级：按尝试次数评定
+  const n = attempts;
+  const starCount = n <= CONFIG.STAR_THRESHOLDS[0] ? 3 : n <= CONFIG.STAR_THRESHOLDS[1] ? 2 : 1;
+  const prev = stars[levelIndex] || 0;
+  if (starCount > prev) { stars[levelIndex] = starCount; saveProgress(); }
+
+  // 逐颗播报星星音
+  for (let i = 0; i < starCount; i++) {
+    setTimeout(() => Audio2.sfx.star(i), 260 + i * 260);
+  }
+
+  setTimeout(() => {
+    showCompletePanel(starCount);
+  }, 700);
+}
+
+/* ---------------- 渲染 ---------------- */
+
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  drawBackground();
+
+  if (!level) return;
+
+  // 目标区域：显示淡淡的参考图 + 轮廓
+  drawTargetBoard();
+
+  // 拼块
+  for (const p of pieces) drawPiece(p);
+
+  // 拖动中的块画在最上层
+  if (dragging) drawPiece(dragging.piece, true);
+
+  drawParticles();
+  drawConfetti();
+}
+
+function drawBackground() {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#FFF8EC');
+  g.addColorStop(1, '#FFEEDC');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawTargetBoard() {
+  const { boardX, boardY, boardW, boardH } = layout;
+
+  // 板面阴影
+  ctx.save();
+  ctx.shadowColor = 'rgba(120, 90, 60, 0.25)';
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = 6;
+  ctx.fillStyle = '#FFFDF8';
+  roundRect(ctx, boardX, boardY, boardW, boardH, 16);
+  ctx.fill();
+  ctx.restore();
+
+  // 参考图：淡淡一层，孩子能看出「要拼成什么样」但不至于直接给答案
+  ctx.save();
+  ctx.globalAlpha = 0.32;
+  roundRect(ctx, boardX, boardY, boardW, boardH, 16);
+  ctx.clip();
+  ctx.drawImage(sceneCanvas, boardX, boardY, boardW, boardH);
+  ctx.restore();
+
+  // 每块的凹槽轮廓
+  for (const p of pieces) {
+    const isTarget = dragging && dragging.piece === p;
+    ctx.save();
+    ctx.translate(p.home.x, p.home.y);
+    ctx.beginPath();
+    p.poly.forEach((pt, i) => {
+      const x = pt[0] * layout.cell, y = pt[1] * layout.cell;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.setLineDash([8, 7]);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = isTarget ? 'rgba(232,120,40,0.95)' : 'rgba(130,98,68,0.72)';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 目标区域边框
+  ctx.save();
+  roundRect(ctx, boardX, boardY, boardW, boardH, 16);
+  ctx.strokeStyle = 'rgba(190,160,130,0.55)';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawPiece(p, onTop = false) {
+  if (!p.bitmap) return;
+  const lift = dragging && dragging.piece === p;
+  const scale = (lift ? CONFIG.LIFT_SCALE : 1) * (1 + p.pop * 0.12);
+
+  ctx.save();
+  ctx.translate(p.pos.x, p.pos.y);
+  ctx.rotate(p.angle);
+  ctx.scale(scale, scale);
+
+  // 阴影
+  ctx.save();
+  ctx.shadowColor = 'rgba(90, 60, 35, 0.35)';
+  ctx.shadowBlur = lift ? CONFIG.LIFT_SHADOW : CONFIG.REST_SHADOW;
+  ctx.shadowOffsetY = lift ? 10 : 3;
+  ctx.globalAlpha = 0.9;
+  // 用形状做阴影载体
+  ctx.beginPath();
+  p.poly.forEach((pt, i) => {
+    const x = pt[0] * layout.cell, y = pt[1] * layout.cell;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.restore();
+
+  // 贴图
+  ctx.drawImage(p.bitmap, -p.bitmap.width / 2, -p.bitmap.height / 2);
+
+  // 靠近目标时的呼吸高亮
+  if (p.glow > 0.02) {
+    ctx.save();
+    ctx.globalAlpha = p.glow * 0.55;
+    ctx.beginPath();
+    p.poly.forEach((pt, i) => {
+      const x = pt[0] * layout.cell, y = pt[1] * layout.cell;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = '#FFD24A';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+function drawParticles() {
+  for (const p of particles) {
+    ctx.save();
+    ctx.globalAlpha = clamp(p.life / 0.55, 0, 1);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawConfetti() {
+  for (const c of confetti) {
+    ctx.save();
+    ctx.globalAlpha = clamp(c.life, 0, 1);
+    ctx.translate(c.x, c.y);
+    ctx.rotate(c.rot);
+    ctx.fillStyle = c.color;
+    ctx.fillRect(-c.size / 2, -c.size / 2, c.size, c.size * 0.62);
+    ctx.restore();
+  }
+}
+
+function roundRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+/* ---------------- 更新循环 ---------------- */
+
+function update(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 460 * dt;
+    p.life -= dt;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+  for (let i = confetti.length - 1; i >= 0; i--) {
+    const c = confetti[i];
+    c.x += c.vx * dt;
+    c.y += c.vy * dt;
+    c.rot += c.vr * dt;
+    c.life -= dt * 0.22;
+    if (c.life <= 0 || c.y > H + 40) confetti.splice(i, 1);
+  }
+  for (const p of pieces) {
+    if (p.pop > 0) {
+      p.pop = Math.max(0, p.pop - dt * 3.2);
+      // 弹跳缓动
+      const t = 1 - p.pop;
+      p.popScale = Math.sin(t * Math.PI) * 0.12;
+    }
+  }
+}
+
+/* ---------------- UI ---------------- */
+
+function updateHUD() {
+  $('#levelName').textContent = level ? `${levelIndex + 1}. ${level.name}` : '拼图乐园';
+  const s = stars[levelIndex] || 0;
+  const el = $('#starCount');
+  if (el) el.textContent = s ? '★'.repeat(s) + '☆'.repeat(3 - s) : '☆☆☆';
+  const att = $('#attemptCount');
+  if (att && level) att.textContent = `第 ${levelIndex + 1} / ${LEVELS.length} 关 · 已尝试 ${attempts} 次`;
+}
+
+function showMenu() {
+  state = State.MENU;
+  $('#menu').classList.remove('hidden');
+  $('#complete').classList.add('hidden');
+  $('#hud').classList.add('hidden');
+  buildLevelCards();
+}
+
+function buildLevelCards() {
+  const wrap = $('#levelList');
+  wrap.innerHTML = '';
+  LEVELS.forEach((lv, i) => {
+    const card = document.createElement('button');
+    card.className = 'levelCard';
+    const c = document.createElement('canvas');
+    c.width = 120; c.height = 120;
+    c.className = 'thumb';
+    drawThumb(c.getContext('2d'), 120, 120, lv.kind, lv.pal);
+    const label = document.createElement('div');
+    label.className = 'lvName';
+    label.textContent = lv.name;
+    const st = document.createElement('div');
+    st.className = 'lvStars';
+    const s = stars[i] || 0;
+    st.textContent = s ? '★'.repeat(s) + '☆'.repeat(3 - s) : '☆☆☆';
+    card.appendChild(c);
+    card.appendChild(label);
+    card.appendChild(st);
+    card.addEventListener('click', () => {
+      Audio2.unlock();
+      Audio2.sfx.tap();
+      startLevel(i);
+    });
+    wrap.appendChild(card);
+  });
+}
+
+function startLevel(i) {
+  $('#menu').classList.add('hidden');
+  $('#complete').classList.add('hidden');
+  $('#hud').classList.remove('hidden');
+  state = State.PLAY;
+  loadLevel(i);
+  Audio2.music.start();
+}
+
+function showCompletePanel(starCount) {
+  const panel = $('#complete');
+  panel.classList.remove('hidden');
+  const st = $('#winStars');
+  st.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const s = document.createElement('span');
+    s.className = 'wstar' + (i < starCount ? ' on' : '');
+    s.textContent = '★';
+    st.appendChild(s);
+  }
+  $('#winTitle').textContent = `${level.name} 完成！`;
+  const nextBtn = $('#nextBtn');
+  if (levelIndex >= LEVELS.length - 1) {
+    nextBtn.textContent = '回到关卡表';
+  } else {
+    nextBtn.textContent = '下一关';
+  }
+}
+
+function nextLevel() {
+  if (levelIndex >= LEVELS.length - 1) {
+    showMenu();
+  } else {
+    startLevel(levelIndex + 1);
+  }
+}
+
+function showReference() {
+  const panel = $('#refModal');
+  const c = $('#refCanvas');
+  const maxW = Math.min(window.innerWidth * 0.86, 520);
+  const ratio = sceneCanvas.height / sceneCanvas.width;
+  c.width = Math.round(maxW);
+  c.height = Math.round(maxW * ratio);
+  const cc = c.getContext('2d');
+  cc.fillStyle = '#fff';
+  cc.fillRect(0, 0, c.width, c.height);
+  cc.drawImage(sceneCanvas, 0, 0, c.width, c.height);
+  panel.classList.remove('hidden');
+  Audio2.voice.say('这是完整的图片，看看拼块应该放在哪里');
+}
+
+/* ---------------- 事件绑定 ---------------- */
+
+function bindEvents() {
+  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('pointermove', onPointerMove);
+  canvas.addEventListener('pointerup', onPointerUp);
+  canvas.addEventListener('pointercancel', onPointerUp);
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  $('#startBtn').addEventListener('click', () => {
+    Audio2.unlock();
+    Audio2.sfx.tap();
+    startLevel(0);
+  });
+
+  $('#menuBtn').addEventListener('click', () => {
+    Audio2.sfx.tap();
+    showMenu();
+  });
+
+  $('#refBtn').addEventListener('click', () => {
+    Audio2.sfx.tap();
+    if (level) showReference();
+  });
+
+  $('#closeRef').addEventListener('click', () => {
+    $('#refModal').classList.add('hidden');
+    Audio2.sfx.tap();
+  });
+
+  $('#nextBtn').addEventListener('click', () => {
+    Audio2.sfx.tap();
+    nextLevel();
+  });
+
+  $('#retryBtn').addEventListener('click', () => {
+    Audio2.sfx.tap();
+    startLevel(levelIndex);
+  });
+
+  $('#menuBtn2').addEventListener('click', () => {
+    Audio2.sfx.tap();
+    showMenu();
+  });
+
+  $('#soundBtn').addEventListener('click', () => {
+    soundOn = !soundOn;
+    Audio2.setEnabled(soundOn);
+    Audio2.setVoiceEnabled(soundOn);
+    saveSound();
+    $('#soundBtn').textContent = soundOn ? '🔊' : '🔇';
+    if (soundOn) { Audio2.unlock(); Audio2.sfx.tap(); Audio2.music.start(); }
+  });
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 120));
+  // HUD 显隐会改变 stage 高度，用 ResizeObserver 兜住，避免画布溢出被裁切
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(() => {
+      const r = canvas.parentElement.getBoundingClientRect();
+      if (Math.abs(r.width - W) > 1 || Math.abs(r.height - H) > 1) resize();
+    });
+    ro.observe(canvas.parentElement);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) Audio2.music.stop();
+    else if (state === State.PLAY || state === State.COMPLETE) Audio2.music.start();
+  });
+}
+
+/* ---------------- 主循环 ---------------- */
+
+let acc = 0, last = performance.now();
+function frame(now) {
+  const raw = Math.min((now - last) / 1000, 0.25);
+  last = now;
+  acc += raw;
+  while (acc >= CONFIG.STEP) { update(CONFIG.STEP); acc -= CONFIG.STEP; }
+  render();
+  requestAnimationFrame(frame);
+}
+
+function init() {
+  resize();
+  bindEvents();
+  $('#soundBtn').textContent = soundOn ? '🔊' : '🔇';
+  Audio2.setEnabled(soundOn);
+  Audio2.setVoiceEnabled(soundOn);
+  showMenu();
+  requestAnimationFrame(frame);
+}
+
+// 调试/测试接口：暴露拼块坐标与状态
+window.__debug = () => pieces.map((p) => ({
+  id: p.id,
+  x: p.pos.x, y: p.pos.y,
+  home: { x: p.home.x, y: p.home.y },
+  placed: p.placed,
+}));
+
+/**
+ * 像素探针：验证每块拼图的贴图内容与场景图对应位置是否一致。
+ * 用于回归测试 drawImage 的裁剪参数用错导致「贴图内容错位」的问题。
+ */
+window.__probe = () => {
+  const cellInScene = sceneCanvas.width / level.cols;
+  const k = layout.cell / cellInScene;
+  const sceneData = sceneCanvas.getContext('2d').getImageData(0, 0, sceneCanvas.width, sceneCanvas.height).data;
+  const SW = sceneCanvas.width, SH = sceneCanvas.height;
+
+  const list = pieces.map((p) => {
+    const bmp = p.bitmap;
+    if (!bmp) return { id: p.id, matchRatio: 0, uniqueColors: 0, opaqueRatio: 0, featureRatio: 0 };
+    const bctx = bmp.getContext('2d');
+    const bd = bctx.getImageData(0, 0, bmp.width, bmp.height).data;
+
+    // 取贴图中落在多边形内的像素，逐个换算回场景坐标比对
+    const cx = bmp.width / 2, cy = bmp.height / 2;
+    let total = 0, match = 0, opaque = 0;
+    const colors = new Set();
+    let feature = 0;
+    // 形状内应有的像素数（用多边形面积估算），用来算填充完整度
+    let polyArea = 0;
+    for (let i = 0; i < p.poly.length; i++) {
+      const a = p.poly[i], b = p.poly[(i + 1) % p.poly.length];
+      polyArea += a[0] * b[1] - b[0] * a[1];
+    }
+    polyArea = Math.abs(polyArea) / 2 * layout.cell * layout.cell;
+
+    for (let y = 0; y < bmp.height; y += 2) {
+      for (let x = 0; x < bmp.width; x += 2) {
+        const bi = (y * bmp.width + x) * 4;
+        if (bd[bi + 3] < 200) continue;
+        opaque++;
+        // 贴图像素 → 拼块局部坐标（格）
+        const lx = (x - cx) / layout.cell, ly = (y - cy) / layout.cell;
+        // 局部坐标 → 场景像素
+        const sx = (p.anchor[0] + lx) * cellInScene;
+        const sy = (p.anchor[1] + ly) * cellInScene;
+        if (sx < 0 || sy < 0 || sx >= SW || sy >= SH) continue;
+        const si = ((sy | 0) * SW + (sx | 0)) * 4;
+        total++;
+        const dr = Math.abs(bd[bi] - sceneData[si]);
+        const dg = Math.abs(bd[bi + 1] - sceneData[si + 1]);
+        const db = Math.abs(bd[bi + 2] - sceneData[si + 2]);
+        if (dr < 26 && dg < 26 && db < 26) match++;
+        colors.add((bd[bi] >> 4) + ',' + (bd[bi + 1] >> 4) + ',' + (bd[bi + 2] >> 4));
+        // 角色特征：深色（眼睛/鼻子/描边）或高饱和色
+        const mx = Math.max(bd[bi], bd[bi + 1], bd[bi + 2]);
+        const mn = Math.min(bd[bi], bd[bi + 1], bd[bi + 2]);
+        if (mx < 90 || (mx - mn) > 70) feature++;
+      }
+    }
+    const n = Math.max(1, total);
+    // 采样步长为 2，面积按 4 倍折算
+    const filledArea = opaque * 4;
+    return {
+      id: p.id,
+      matchRatio: total ? match / total : 0,
+      uniqueColors: colors.size,
+      fillRatio: Math.min(1, filledArea / Math.max(1, polyArea)),
+      featureRatio: feature / n,
+    };
+  });
+
+  // 拼合完成度：把所有块都放到目标位后重绘一帧，与场景图比对
+  const saved = pieces.map((p) => ({ p, x: p.pos.x, y: p.pos.y, placed: p.placed }));
+  pieces.forEach((p) => { p.pos.x = p.home.x; p.pos.y = p.home.y; p.angle = 0; p.placed = true; });
+  render();
+  const shot = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  let tot = 0, hit = 0;
+  for (let y = 0; y < canvas.height; y += 3) {
+    for (let x = 0; x < canvas.width; x += 3) {
+      // 只比较目标板区域
+      const px = x / dpr, py = y / dpr;
+      if (px < layout.boardX || px > layout.boardX + layout.boardW) continue;
+      if (py < layout.boardY || py > layout.boardY + layout.boardH) continue;
+      const sx = Math.floor((px - layout.boardX) / layout.boardW * SW);
+      const sy = Math.floor((py - layout.boardY) / layout.boardH * SH);
+      if (sx < 0 || sy < 0 || sx >= SW || sy >= SH) continue;
+      const si = (sy * SW + sx) * 4;
+      const di = (y * canvas.width + x) * 4;
+      tot++;
+      if (Math.abs(shot[di] - sceneData[si]) < 30 &&
+          Math.abs(shot[di + 1] - sceneData[si + 1]) < 30 &&
+          Math.abs(shot[di + 2] - sceneData[si + 2]) < 30) hit++;
+    }
+  }
+  // 还原
+  saved.forEach((s) => { s.p.pos.x = s.x; s.p.pos.y = s.y; s.p.placed = s.placed; });
+  render();
+
+  return { name: level.name, pieces: list, assembledMatch: tot ? hit / tot : 0 };
+};
+
+init();
+
+
+})();
+
+</script>
+</body>
+</html>
